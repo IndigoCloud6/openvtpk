@@ -16,6 +16,8 @@ const inspect = require('../shared/inspect')
 const levels = require('../shared/levels')
 const params = require('../shared/params')
 const root = require('../shared/root')
+const styles = require('../shared/style')
+const sprites = require('../shared/sprites')
 
 const gunzip = promisify(require('zlib').gunzip)
 
@@ -74,15 +76,17 @@ const toVectorLayers = (setOfLayers) => {
  * @param {Set[String]} layers the layers used in the vector tiles
  * @returns {Object} contains the metadata required by the MBTiles container
  */
-const tilesetInfo = (rootData, levels, layers) => {
+const tilesetInfo = (rootData,tileStyles,tileSprites,levels, layers) => {
 
     const getBounds = initialExtent => {
         const bounds = []
         // left bottom
-        bounds.push(coordinates.webMercator.xyToLatLng([initialExtent.xmin, initialExtent.ymin]))
+        //bounds.push(coordinates.webMercator.xyToLatLng([initialExtent.xmin, initialExtent.ymin]))
+        bounds.push([initialExtent.xmin, initialExtent.ymin])
 
         // right top
-        bounds.push(coordinates.webMercator.xyToLatLng([initialExtent.xmax, initialExtent.ymax]))
+        //bounds.push(coordinates.webMercator.xyToLatLng([initialExtent.xmax, initialExtent.ymax]))
+        bounds.push([initialExtent.xmax, initialExtent.ymax])
 
         return bounds.join(',')
     }
@@ -95,6 +99,9 @@ const tilesetInfo = (rootData, levels, layers) => {
         "minzoom": levels.min,
         "maxzoom": levels.max,
         "type": "overlay",
+        "rootdata": JSON.stringify(rootData),
+        "styles":JSON.stringify(tileStyles),
+        "sprites":JSON.stringify(tileSprites),
         "json": `{"vector_layers":  ${JSON.stringify(toVectorLayers(layers))}}`
     }
     return info
@@ -171,6 +178,8 @@ const doTransform = async (sourceFolder, inspection) => {
     const levelsToProcess = inspection.levels.filter(level => (level.z >= minLevel && level.z <= maxLevel))
 
     const tileRoot = root(sourceFolder)
+    const tileStyles = styles(sourceFolder)
+    const tileSprites = sprites(sourceFolder)
     const mbtilesName = `${tileRoot.name}.mbtiles`
     console.log(`creating MBTiles container ${mbtilesName}`)
     try {
@@ -178,7 +187,7 @@ const doTransform = async (sourceFolder, inspection) => {
         await tileContainer.startWritingAsync()
         // BAD PRACTICE, should NOT read and write with a single function
         const layers = await doWrite(tileContainer, levelsToProcess)
-        await tileContainer.putInfoAsync(tilesetInfo(tileRoot, { min: minLevel, max: maxLevel } , layers))
+        await tileContainer.putInfoAsync(tilesetInfo(tileRoot,tileStyles,tileSprites,{ min: minLevel, max: maxLevel } , layers))
         await tileContainer.stopWritingAsync()
     }
     catch (error) {
