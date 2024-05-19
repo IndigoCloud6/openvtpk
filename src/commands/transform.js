@@ -18,6 +18,8 @@ const params = require('../shared/params')
 const root = require('../shared/root')
 const styles = require('../shared/style')
 const sprites = require('../shared/sprites')
+const spritesimg = require('../shared/spritesimg')
+
 
 const gunzip = promisify(require('zlib').gunzip)
 
@@ -76,7 +78,7 @@ const toVectorLayers = (setOfLayers) => {
  * @param {Set[String]} layers the layers used in the vector tiles
  * @returns {Object} contains the metadata required by the MBTiles container
  */
-const tilesetInfo = (rootData,tileStyles,tileSprites,levels, layers) => {
+const tilesetInfo = (rootData,tileStyles,tileSprites,tileSpritespng,levels, layers) => {
 
     const getBounds = initialExtent => {
         const bounds = []
@@ -102,6 +104,7 @@ const tilesetInfo = (rootData,tileStyles,tileSprites,levels, layers) => {
         "rootdata": JSON.stringify(rootData),
         "styles":JSON.stringify(tileStyles),
         "sprites":JSON.stringify(tileSprites),
+        "spritesimg":tileSpritespng,
         "json": `{"vector_layers":  ${JSON.stringify(toVectorLayers(layers))}}`
     }
     return info
@@ -180,6 +183,7 @@ const doTransform = async (sourceFolder, inspection) => {
     const tileRoot = root(sourceFolder)
     const tileStyles = styles(sourceFolder)
     const tileSprites = sprites(sourceFolder)
+    const tileSpritespng = spritesimg(sourceFolder)
     const mbtilesName = `${tileRoot.name}.mbtiles`
     console.log(`creating MBTiles container ${mbtilesName}`)
     try {
@@ -187,7 +191,7 @@ const doTransform = async (sourceFolder, inspection) => {
         await tileContainer.startWritingAsync()
         // BAD PRACTICE, should NOT read and write with a single function
         const layers = await doWrite(tileContainer, levelsToProcess)
-        await tileContainer.putInfoAsync(tilesetInfo(tileRoot,tileStyles,tileSprites,{ min: minLevel, max: maxLevel } , layers))
+        await tileContainer.putInfoAsync(tilesetInfo(tileRoot,tileStyles,tileSprites,tileSpritespng,{ min: minLevel, max: maxLevel } , layers))
         await tileContainer.stopWritingAsync()
     }
     catch (error) {
